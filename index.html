@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIPANAS — Sistem Deteksi Titik Api Karhutla</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fire-red: #E24B4A;
+    --fire-orange: #EF9F27;
+    --fire-yellow: #FAC775;
+    --cool-bg: #0a0e1a;
+    --panel-bg: #111827;
+    --card-bg: #1a2235;
+    --border: rgba(239,159,39,0.2);
+    --text-primary: #f0e6d0;
+    --text-secondary: #8a9ab5;
+    --success: #1D9E75;
+    --danger: #E24B4A;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--cool-bg); color: var(--text-primary); min-height: 100vh; }
+
+  /* ── Header ── */
+  .app-header {
+    background: var(--panel-bg);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--fire-red), var(--fire-orange));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .logo-text { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--fire-orange); letter-spacing: 2px; }
+  .logo-sub { font-size: 10px; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; }
+  .status-badge {
+    background: rgba(29,158,117,0.15); border: 1px solid var(--success);
+    color: var(--success); padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-family: 'Space Mono', monospace;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .status-dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* ── API Config Bar ── */
+  .config-bar {
+    background: rgba(226,75,74,0.07);
+    border-bottom: 1px solid rgba(226,75,74,0.2);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .config-bar input {
+    flex: 1; max-width: 280px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 4px; color: var(--text-primary); padding: 4px 10px;
+    font-size: 12px; font-family: monospace;
+  }
+  .config-label { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; color: var(--fire-orange); }
+
+  /* ── Layout ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    height: calc(100vh - 101px);
+  }
+  .left-panel {
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+  .section-label {
+    font-family: 'Space Mono', monospace; font-size: 10px;
+    color: var(--fire-orange); letter-spacing: 2px;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .input-group { margin-bottom: 10px; }
+  .input-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; }
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%; background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text-primary); padding: 8px 10px;
+    font-size: 13px; font-family: 'IBM Plex Sans', sans-serif; outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--fire-orange); }
+  select option { background: var(--panel-bg); }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* FWI Gauge */
+  .fwi-bar {
+    margin-top: 8px;
+    height: 6px; border-radius: 3px;
+    background: linear-gradient(to right, #1D9E75, #EF9F27, #E24B4A);
+    position: relative;
+  }
+  .fwi-marker {
+    position: absolute; top: -3px;
+    width: 12px; height: 12px; border-radius: 50%;
+    background: white; border: 2px solid var(--fire-orange);
+    transform: translateX(-50%);
+    transition: left 0.5s;
+  }
+  .fwi-label {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--text-secondary); margin-top: 4px;
+  }
+  .fwi-value {
+    font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700;
+    color: var(--fire-orange); margin-top: 4px;
+  }
+
+  .btn-primary {
+    width: 100%; background: linear-gradient(135deg, var(--fire-red), var(--fire-orange));
+    border: none; border-radius: 8px; color: white; padding: 10px;
+    font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer; transition: opacity 0.2s, transform 0.1s; margin-top: 4px;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; text-align: center;
+  }
+  .stat-value { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 10px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .c-red { color: var(--fire-red); }
+  .c-orange { color: var(--fire-orange); }
+  .c-yellow { color: var(--fire-yellow); }
+
+  /* Hotspot list */
+  .hotspot-list { flex: 1; overflow-y: auto; padding: 10px; }
+  .hotspot-list::-webkit-scrollbar { width: 3px; }
+  .hotspot-list::-webkit-scrollbar-thumb { background: var(--border); }
+  .hotspot-item {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; margin-bottom: 8px;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  }
+  .hotspot-item:hover { border-color: var(--fire-orange); background: rgba(239,159,39,0.05); }
+  .hotspot-item.selected { border-color: var(--fire-red); background: rgba(226,75,74,0.08); }
+  .hotspot-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .hotspot-name { font-size: 13px; font-weight: 500; }
+  .level-badge {
+    font-size: 10px; font-family: 'Space Mono', monospace;
+    padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .level-tinggi { background: rgba(226,75,74,0.2); color: var(--fire-red); border: 1px solid rgba(226,75,74,0.4); }
+  .level-sedang { background: rgba(239,159,39,0.2); color: var(--fire-orange); border: 1px solid rgba(239,159,39,0.4); }
+  .level-rendah { background: rgba(250,199,117,0.2); color: var(--fire-yellow); border: 1px solid rgba(250,199,117,0.4); }
+  .hotspot-meta { display: flex; gap: 12px; font-size: 11px; color: var(--text-secondary); }
+
+  /* Right content */
+  .right-content { display: flex; flex-direction: column; overflow: hidden; }
+  .map-area { flex: 1; position: relative; background: #0d1520; overflow: hidden; }
+  #map-canvas { width: 100%; height: 100%; cursor: crosshair; }
+  .map-legend {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(17,24,39,0.9); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 14px; font-size: 11px;
+  }
+  .legend-title { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--fire-orange); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .legend-item { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; color: var(--text-secondary); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .map-coords {
+    position: absolute; bottom: 12px; left: 12px;
+    background: rgba(17,24,39,0.8); border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 10px;
+    font-family: 'Space Mono', monospace; font-size: 10px; color: var(--text-secondary);
+  }
+
+  /* Analysis panel */
+  .analysis-panel {
+    height: 200px; background: var(--panel-bg);
+    border-top: 1px solid var(--border); display: flex; flex-direction: column;
+  }
+  .analysis-header {
+    padding: 8px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .analysis-title { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--fire-orange); letter-spacing: 1px; }
+  .api-info { font-size: 10px; color: var(--text-secondary); font-family: 'Space Mono', monospace; }
+  .section-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 7px 14px; font-size: 11px; font-family: 'Space Mono', monospace;
+    color: var(--text-secondary); cursor: pointer; border-bottom: 2px solid transparent;
+    transition: all 0.2s; letter-spacing: 1px;
+  }
+  .tab.active { color: var(--fire-orange); border-bottom-color: var(--fire-orange); }
+  .analysis-content { flex: 1; overflow-y: auto; padding: 10px 16px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
+  .analysis-content::-webkit-scrollbar { width: 3px; }
+  .analysis-content::-webkit-scrollbar-thumb { background: var(--border); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; color: var(--text-primary); }
+
+  .thinking { display: flex; align-items: center; gap: 8px; color: var(--fire-orange); font-size: 12px; font-style: italic; }
+  .thinking-dots span { animation: blink 1.4s infinite; opacity: 0; }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0} 40%{opacity:1} }
+
+  .alert-banner { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; margin: 8px 12px 0; }
+  .alert-danger { background: rgba(226,75,74,0.1); border: 1px solid rgba(226,75,74,0.3); color: var(--fire-red); }
+  .alert-warning { background: rgba(239,159,39,0.1); border: 1px solid rgba(239,159,39,0.3); color: var(--fire-orange); }
+
+  .empty-state { text-align: center; padding: 28px 16px; color: var(--text-secondary); font-size: 12px; line-height: 1.8; }
+  .empty-icon { font-size: 28px; margin-bottom: 8px; }
+
+  .error-toast {
+    position: fixed; bottom: 20px; right: 20px;
+    background: var(--panel-bg); border: 1px solid var(--fire-red);
+    color: var(--fire-red); padding: 12px 16px; border-radius: 8px;
+    font-size: 12px; max-width: 320px; z-index: 999;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div class="logo">
+    <div class="logo-icon">🔥</div>
+    <div>
+      <div class="logo-text">SIPANAS</div>
+      <div class="logo-sub">Sistem Deteksi Titik Api Karhutla</div>
+    </div>
+  </div>
+  <div class="status-badge">
+    <div class="status-dot"></div>
+    <span id="api-status">MENGHUBUNGKAN...</span>
+  </div>
+</div>
+
+<div class="config-bar">
+  <span class="config-label">BACKEND URL</span>
+  <input type="text" id="api-url" value="http://localhost:8000" placeholder="http://localhost:8000" />
+  <button onclick="checkHealth()" style="background:transparent;border:1px solid var(--border);color:var(--text-secondary);padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;">Test Koneksi</button>
+</div>
+
+<div class="main-grid">
+  <div class="left-panel">
+    <div class="panel-section">
+      <div class="section-label">Input Data Observasi</div>
+
+      <div class="input-group">
+        <div class="input-label">Wilayah / Lokasi</div>
+        <input type="text" id="inp-lokasi" placeholder="Contoh: Kab. Ogan Komering Ilir, Sumsel" />
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">Koordinat (opsional)</div>
+        <div class="grid-2">
+          <input type="number" id="inp-lat" placeholder="Lat: -3.2" step="0.0001" />
+          <input type="number" id="inp-lon" placeholder="Lon: 105.8" step="0.0001" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="input-group">
+          <div class="input-label">Suhu Permukaan (°C)</div>
+          <input type="number" id="inp-suhu" placeholder="45" min="0" max="80" />
+        </div>
+        <div class="input-group">
+          <div class="input-label">Kelembaban (%)</div>
+          <input type="number" id="inp-rh" placeholder="35" min="0" max="100" />
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="input-group">
+          <div class="input-label">Kecepatan Angin (km/j)</div>
+          <input type="number" id="inp-angin" placeholder="20" min="0" />
+        </div>
+        <div class="input-group">
+          <div class="input-label">Tutupan Lahan</div>
+          <select id="inp-lahan">
+            <option value="">Pilih...</option>
+            <option>Hutan gambut</option>
+            <option>Hutan tropis</option>
+            <option>Lahan pertanian</option>
+            <option>Semak belukar</option>
+            <option>Perkebunan sawit</option>
+            <option>Savana/padang rumput</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-group">
+        <div class="input-label">Catatan Tambahan</div>
+        <textarea id="inp-notes" rows="2" placeholder="Hotspot MODIS, kondisi kemarau, dll..."></textarea>
+      </div>
+
+      <!-- FWI preview -->
+      <div class="input-group">
+        <div class="input-label">Fire Weather Index (preview)</div>
+        <div class="fwi-value"><span id="fwi-preview">–</span><span style="font-size:12px;color:var(--text-secondary);margin-left:4px;">/100</span></div>
+        <div class="fwi-bar"><div class="fwi-marker" id="fwi-marker" style="left:0%;"></div></div>
+        <div class="fwi-label"><span>Rendah</span><span>Sedang</span><span>Tinggi</span><span>Ekstrem</span></div>
+      </div>
+
+      <button class="btn-primary" id="btn-analyze" onclick="runAnalysis()">
+        ⚡ ANALISIS TITIK PANAS
+      </button>
+    </div>
+
+    <div class="panel-section">
+      <div class="section-label">Ringkasan Deteksi</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-value c-red" id="stat-high">0</div><div class="stat-label">Tinggi</div></div>
+        <div class="stat-card"><div class="stat-value c-orange" id="stat-med">0</div><div class="stat-label">Sedang</div></div>
+        <div class="stat-card"><div class="stat-value c-yellow" id="stat-low">0</div><div class="stat-label">Rendah</div></div>
+        <div class="stat-card"><div class="stat-value" id="stat-fwi">–</div><div class="stat-label">FWI</div></div>
+      </div>
+    </div>
+
+    <div id="alert-area"></div>
+
+    <div style="padding:8px 12px 0;border-bottom:1px solid var(--border);">
+      <div class="section-label" style="margin-bottom:6px;">Titik Panas Terdeteksi</div>
+    </div>
+    <div class="hotspot-list" id="hotspot-list">
+      <div class="empty-state"><div class="empty-icon">🛰️</div><div>Masukkan data observasi<br>dan klik Analisis</div></div>
+    </div>
+  </div>
+
+  <div class="right-content">
+    <div class="map-area">
+      <canvas id="map-canvas"></canvas>
+      <div class="map-legend">
+        <div class="legend-title">Level Risiko</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E24B4A;"></div>Tinggi</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#EF9F27;"></div>Sedang</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FAC775;"></div>Rendah</div>
+      </div>
+      <div class="map-coords" id="map-coords">Hover untuk koordinat</div>
+    </div>
+
+    <div class="analysis-panel">
+      <div class="analysis-header">
+        <div class="analysis-title">ANALISIS AI — REKOMENDASI & PREDIKSI</div>
+        <div class="api-info">FastAPI + Claude Sonnet 4</div>
+      </div>
+      <div class="section-tabs">
+        <div class="tab active" onclick="switchTab('analisis',this)">Analisis</div>
+        <div class="tab" onclick="switchTab('rekomendasi',this)">Rekomendasi</div>
+        <div class="tab" onclick="switchTab('prediksi',this)">Prediksi Penyebaran</div>
+      </div>
+      <div class="analysis-content">
+        <div id="tab-analisis" class="tab-content active">Hasil analisis AI akan tampil setelah data diproses...</div>
+        <div id="tab-rekomendasi" class="tab-content">Rekomendasi tindakan akan tampil setelah analisis...</div>
+        <div id="tab-prediksi" class="tab-content">Prediksi penyebaran api akan tampil setelah analisis...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let hotspots = [], selectedIdx = -1;
+const canvas = document.getElementById('map-canvas');
+const ctx = canvas.getContext('2d');
+
+function getApiUrl() { return document.getElementById('api-url').value.replace(/\/$/, ''); }
+
+async function checkHealth() {
+  const el = document.getElementById('api-status');
+  try {
+    const res = await fetch(getApiUrl() + '/api/health');
+    const data = await res.json();
+    el.textContent = 'BACKEND ONLINE';
+    el.parentElement.style.color = '#1D9E75';
+    el.parentElement.style.borderColor = '#1D9E75';
+    showToast('✅ Backend terhubung: ' + data.service, 'success');
+  } catch {
+    el.textContent = 'BACKEND OFFLINE';
+    el.parentElement.style.color = '#E24B4A';
+    el.parentElement.style.borderColor = '#E24B4A';
+    showToast('❌ Tidak bisa terhubung ke backend. Pastikan server berjalan.', 'error');
+  }
+}
+
+function showToast(msg, type='error') {
+  const t = document.createElement('div');
+  t.className = 'error-toast';
+  t.style.borderColor = type==='success' ? '#1D9E75' : '#E24B4A';
+  t.style.color = type==='success' ? '#1D9E75' : '#E24B4A';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4000);
+}
+
+// FWI preview saat user mengetik
+function updateFwiPreview() {
+  const suhu = parseFloat(document.getElementById('inp-suhu').value) || 0;
+  const rh = parseFloat(document.getElementById('inp-rh').value) || 50;
+  const angin = parseFloat(document.getElementById('inp-angin').value) || 0;
+  if (!suhu && !angin) return;
+  const ffmc = Math.max(0, (suhu * 0.8) + ((100 - rh) * 0.5) - 10);
+  const fwi = Math.min(100, Math.round((ffmc + angin * 0.6) * 0.5));
+  document.getElementById('fwi-preview').textContent = fwi;
+  document.getElementById('fwi-marker').style.left = fwi + '%';
+}
+
+['inp-suhu','inp-rh','inp-angin'].forEach(id => {
+  document.getElementById(id).addEventListener('input', updateFwiPreview);
+});
+
+// ── Map ──────────────────────────────────────────────────────────────────────
+function resizeCanvas() {
+  const p = canvas.parentElement;
+  canvas.width = p.clientWidth; canvas.height = p.clientHeight;
+  drawMap();
+}
+
+function drawMap() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#0d1520'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(239,159,39,0.06)'; ctx.lineWidth=0.5;
+  for(let i=0;i<W;i+=50){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,H);ctx.stroke();}
+  for(let j=0;j<H;j+=50){ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(W,j);ctx.stroke();}
+  ctx.strokeStyle='rgba(239,159,39,0.12)'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  for(let i=1;i<4;i++){
+    ctx.beginPath();ctx.moveTo(W*i/4,0);ctx.lineTo(W*i/4,H);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,H*i/4);ctx.lineTo(W,H*i/4);ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(29,158,117,0.06)';
+  [[.05,.15,.4,.3],[.5,.1,.35,.45],[.1,.5,.55,.4],[.68,.55,.28,.35]].forEach(([x,y,w,h])=>{
+    ctx.beginPath(); ctx.roundRect(x*W,y*H,w*W,h*H,20); ctx.fill();
+  });
+  ctx.font='10px Space Mono,monospace'; ctx.fillStyle='rgba(138,154,181,0.25)';
+  [['KALIMANTAN BARAT',.08,.38],['KALIMANTAN TENGAH',.42,.32],['SUMATERA SELATAN',.52,.68],['RIAU',.14,.22]]
+    .forEach(([t,x,y])=>ctx.fillText(t,x*W,y*H));
+
+  hotspots.forEach((h,i) => {
+    const x=h.px*W, y=h.py*H;
+    const color = h.level==='tinggi'?'#E24B4A':h.level==='sedang'?'#EF9F27':'#FAC775';
+    const r = h.level==='tinggi'?14:h.level==='sedang'?11:8;
+    const alpha = i===selectedIdx?1:0.7;
+    const [cr,cg,cb] = [parseInt(color.slice(1,3),16),parseInt(color.slice(3,5),16),parseInt(color.slice(5,7),16)];
+    ctx.beginPath(); ctx.arc(x,y,r*2,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${cr},${cg},${cb},${alpha*0.15})`; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${cr},${cg},${cb},${alpha})`; ctx.fill();
+    if(i===selectedIdx){
+      ctx.beginPath(); ctx.arc(x,y,r+4,0,Math.PI*2);
+      ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+    }
+    ctx.fillStyle='white'; ctx.font=`bold ${r>10?10:8}px Space Mono,monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(i+1,x,y); ctx.textAlign='left';
+  });
+}
+
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  document.getElementById('map-coords').textContent =
+    `Lat:${(-(my/canvas.height)*10+2).toFixed(4)}° Lon:${(mx/canvas.width*20+95).toFixed(4)}°`;
+});
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left)/canvas.width, my=(e.clientY-rect.top)/canvas.height;
+  let closest=-1, minD=0.04;
+  hotspots.forEach((h,i)=>{const d=Math.hypot(h.px-mx,h.py-my);if(d<minD){minD=d;closest=i;}});
+  if(closest>=0){selectedIdx=closest;renderHotspotList();drawMap();}
+});
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+function switchTab(name,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+function updateStats(fwi){
+  document.getElementById('stat-high').textContent=hotspots.filter(x=>x.level==='tinggi').length;
+  document.getElementById('stat-med').textContent=hotspots.filter(x=>x.level==='sedang').length;
+  document.getElementById('stat-low').textContent=hotspots.filter(x=>x.level==='rendah').length;
+  document.getElementById('stat-fwi').textContent=fwi||'–';
+}
+
+function renderHotspotList(){
+  const list=document.getElementById('hotspot-list');
+  if(!hotspots.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">🛰️</div><div>Belum ada titik panas terdeteksi</div></div>';return;}
+  list.innerHTML=hotspots.map((h,i)=>`
+    <div class="hotspot-item ${i===selectedIdx?'selected':''}" onclick="selectHotspot(${i})">
+      <div class="hotspot-header">
+        <div class="hotspot-name">${h.nama}</div>
+        <div class="level-badge level-${h.level}">${h.level.toUpperCase()}</div>
+      </div>
+      <div class="hotspot-meta">
+        <span>🌡 ${h.suhu}°C</span>
+        <span>💨 ${h.angin} km/j</span>
+        <span>💧 ${h.rh}%</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectHotspot(i){selectedIdx=i;renderHotspotList();drawMap();}
+
+async function runAnalysis(){
+  const lokasi = document.getElementById('inp-lokasi').value.trim();
+  const suhu = parseFloat(document.getElementById('inp-suhu').value);
+  const rh = parseFloat(document.getElementById('inp-rh').value);
+  const angin = parseFloat(document.getElementById('inp-angin').value);
+  const lahan = document.getElementById('inp-lahan').value;
+
+  if(!lokasi || !suhu || !rh || !angin || !lahan){
+    showToast('⚠️ Lengkapi field: lokasi, suhu, kelembaban, angin, dan tutupan lahan');
+    return;
+  }
+
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled=true; btn.textContent='⏳ MENGIRIM KE BACKEND...';
+  ['analisis','rekomendasi','prediksi'].forEach(tab=>{
+    document.getElementById('tab-'+tab).innerHTML=`<div class="thinking">⚡ Memproses di backend <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+  });
+
+  const payload = {
+    lokasi,
+    lat: parseFloat(document.getElementById('inp-lat').value) || null,
+    lon: parseFloat(document.getElementById('inp-lon').value) || null,
+    suhu, kelembaban: rh, kecepatan_angin: angin,
+    tutupan_lahan: lahan,
+    catatan: document.getElementById('inp-notes').value
+  };
+
+  try {
+    const res = await fetch(getApiUrl() + '/api/analisis', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    if(!res.ok){
+      const err = await res.json();
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    hotspots = data.hotspots || [];
+    hotspots.forEach(h=>{
+      if(h.px===undefined) h.px=Math.random()*0.7+0.1;
+      if(h.py===undefined) h.py=Math.random()*0.7+0.1;
+    });
+
+    updateStats(data.fire_weather_index);
+    renderHotspotList();
+    drawMap();
+
+    document.getElementById('tab-analisis').innerHTML = data.analisis || '';
+    document.getElementById('tab-rekomendasi').innerHTML = data.rekomendasi || '';
+    document.getElementById('tab-prediksi').innerHTML = data.prediksi || '';
+
+    const alertArea = document.getElementById('alert-area');
+    if(data.level_keseluruhan==='tinggi'){
+      alertArea.innerHTML=`<div class="alert-banner alert-danger">🔴 SIAGA TINGGI — Risiko karhutla sangat tinggi</div>`;
+    } else if(data.level_keseluruhan==='sedang'){
+      alertArea.innerHTML=`<div class="alert-banner alert-warning">🟠 WASPADA — Pantau kondisi lapangan</div>`;
+    } else {
+      alertArea.innerHTML='';
+    }
+
+  } catch(err){
+    showToast('❌ Error: ' + err.message);
+    ['analisis','rekomendasi','prediksi'].forEach(tab=>{
+      document.getElementById('tab-'+tab).innerHTML=`<span style="color:var(--fire-red)">Error: ${err.message}</span>`;
+    });
+  }
+
+  btn.disabled=false; btn.textContent='⚡ ANALISIS TITIK PANAS';
+}
+
+checkHealth();
+</script>
+</body>
+</html>
